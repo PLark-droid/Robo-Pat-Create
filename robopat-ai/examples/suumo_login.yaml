@@ -1,0 +1,180 @@
+# SUUMO ログイン & 反響データ取得スクリプト
+# このファイルは Robo-Pat AI で生成されたサンプルです
+
+project:
+  name: "SUUMO反響データ取得"
+  description: "SUUMOにログインして反響データを取得するスクリプト"
+
+variables:
+  - name: USERNAME
+    type: STRING
+    default: ""
+  - name: PASSWORD
+    type: STRING
+    default: ""
+  - name: OUTPUT_PATH
+    type: FILE
+    default: "C:\\output\\反響データ.csv"
+  - name: extracted_data
+    type: STRING
+    default: ""
+
+steps:
+  # ブラウザ起動
+  - id: 1
+    command: comment
+    options:
+      text: "=== SUUMO 反響データ取得処理 開始 ==="
+
+  - id: 2
+    command: open_chrome
+    comment: "SUUMOの管理画面を開く"
+    options:
+      url: "https://suumo.jp/manage/"
+
+  - id: 3
+    command: wait_for_screen_calms
+    comment: "ページ読み込み完了を待機"
+    options:
+      timeout: 10
+
+  # ログイン処理
+  - id: 4
+    command: try
+    comment: "ログイン処理（エラーハンドリング付き）"
+
+  - id: 5
+    command: input_text
+    comment: "ユーザー名を入力"
+    options:
+      selector: "#login-id"
+      selector_type: CSS
+      text: "${USERNAME}"
+      clear_first: true
+
+  - id: 6
+    command: input_password
+    comment: "パスワードを入力"
+    options:
+      selector: "#login-password"
+      selector_type: CSS
+      password: "${PASSWORD}"
+
+  - id: 7
+    command: click
+    comment: "ログインボタンをクリック"
+    options:
+      selector: "button.login-submit"
+      selector_type: CSS
+      click_type: SINGLE
+      wait_timeout: 10
+
+  - id: 8
+    command: wait_for_screen_calms
+    comment: "ログイン完了を待機"
+    options:
+      timeout: 15
+
+  - id: 9
+    command: catch
+    comment: "ログインエラー時の処理"
+    options:
+      error_variable: login_error
+
+  - id: 10
+    command: script_exit
+    comment: "エラーで終了"
+    options:
+      status: ERROR
+      message: "ログインに失敗しました: ${login_error}"
+
+  - id: 11
+    command: end_try
+
+  # 反響ページへ移動
+  - id: 12
+    command: click
+    comment: "反響管理メニューをクリック"
+    options:
+      selector: "//a[contains(text(), '反響管理')]"
+      selector_type: XPATH
+      click_type: SINGLE
+      wait_timeout: 10
+
+  - id: 13
+    command: wait_for_screen_calms
+    options:
+      timeout: 10
+
+  # データ取得ループ
+  - id: 14
+    command: comment
+    options:
+      text: "=== 反響データ取得ループ ==="
+
+  - id: 15
+    command: while
+    comment: "全ページ取得するまでループ"
+    options:
+      condition: "${has_next_page} == true"
+      max_iterations: 100
+
+  - id: 16
+    command: get_text
+    comment: "反響データを取得"
+    options:
+      selector: ".inquiry-list"
+      selector_type: CSS
+      variable: current_page_data
+
+  - id: 17
+    command: execute_script
+    comment: "データを集約"
+    options:
+      script: "return document.querySelector('.pagination .next') !== null"
+      variable: has_next_page
+
+  - id: 18
+    command: if
+    comment: "次ページがあれば移動"
+    options:
+      condition: "${has_next_page}"
+      operator: EQUALS
+
+  - id: 19
+    command: click
+    options:
+      selector: ".pagination .next"
+      selector_type: CSS
+      click_type: SINGLE
+      wait_timeout: 5
+
+  - id: 20
+    command: wait_for_screen_calms
+    options:
+      timeout: 5
+
+  - id: 21
+    command: end_if
+
+  - id: 22
+    command: end_while
+
+  # 終了処理
+  - id: 23
+    command: comment
+    options:
+      text: "=== 処理完了 ==="
+
+  - id: 24
+    command: close_tab
+    comment: "ブラウザを閉じる"
+    options:
+      type: CURRENT
+
+  - id: 25
+    command: script_exit
+    comment: "正常終了"
+    options:
+      status: SUCCESS
+      message: "反響データ取得が完了しました"

@@ -1,0 +1,9 @@
+{
+  "project_name": "SUUMO自動化ロボット",
+  "tab_titles": {
+    "実行タブ": "メイン処理"
+  },
+  "replacements": {
+    "反響記録ロボット": "SUUMO自動化ロボット"
+  }
+}

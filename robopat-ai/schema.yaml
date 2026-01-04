@@ -1,0 +1,247 @@
+# Robo-Pat AI Script Schema
+# このスキーマに従ってYAMLを生成すると、Robo-Pat (.bwnp) に変換できます
+
+version: "1.0"
+
+# プロジェクト情報
+project:
+  name: string          # シナリオ名
+  description: string   # 説明（オプション）
+  author: string        # 作成者（オプション）
+
+# 変数定義
+variables:
+  - name: string        # 変数名
+    type: enum          # STRING, INTEGER, BOOLEAN, LIST, FILE
+    default: any        # デフォルト値（オプション）
+
+# ステップ定義
+steps:
+  - id: integer                    # ステップID（自動生成可）
+    command: string                # コマンド名
+    comment: string                # コメント（オプション）
+    options: object                # コマンド固有のオプション
+    on_error: enum                 # STOP, CONTINUE, GOTO（オプション）
+    error_goto: integer            # エラー時のジャンプ先ID（オプション）
+
+# ========================================
+# 利用可能なコマンド一覧
+# ========================================
+
+commands:
+  # --- ブラウザ操作 ---
+  open_chrome:
+    description: "Chromeブラウザを開く"
+    options:
+      url: string                  # 開くURL
+      profile: string              # プロファイル名（オプション）
+      headless: boolean            # ヘッドレスモード（オプション）
+
+  click:
+    description: "要素をクリック"
+    options:
+      selector: string             # CSSセレクタ or XPath
+      selector_type: enum          # CSS, XPATH, ID, NAME, CLASS
+      click_type: enum             # SINGLE, DOUBLE, RIGHT
+      wait_timeout: integer        # 待機時間（秒）
+
+  input_text:
+    description: "テキストを入力"
+    options:
+      selector: string
+      selector_type: enum
+      text: string                 # 入力テキスト（変数可: ${VAR_NAME}）
+      clear_first: boolean         # 入力前にクリア
+
+  input_password:
+    description: "パスワードを入力（マスク）"
+    options:
+      selector: string
+      selector_type: enum
+      password: string             # パスワード（暗号化推奨）
+
+  input_calendar:
+    description: "カレンダーに日付入力"
+    options:
+      selector: string
+      selector_type: enum
+      date: string                 # 日付（YYYY-MM-DD or ${VAR}）
+
+  select:
+    description: "ドロップダウンから選択"
+    options:
+      selector: string
+      selector_type: enum
+      value: string                # 選択値
+      by: enum                     # VALUE, TEXT, INDEX
+
+  get_text:
+    description: "要素のテキストを取得"
+    options:
+      selector: string
+      selector_type: enum
+      variable: string             # 格納先変数名
+
+  get_attribute:
+    description: "要素の属性を取得"
+    options:
+      selector: string
+      selector_type: enum
+      attribute: string            # 属性名（href, src, etc.）
+      variable: string
+
+  execute_script:
+    description: "JavaScriptを実行"
+    options:
+      script: string               # JavaScript コード
+      variable: string             # 結果格納先（オプション）
+
+  navigate_back:
+    description: "ブラウザの戻るボタン"
+    options: {}
+
+  close_tab:
+    description: "タブを閉じる"
+    options:
+      type: enum                   # CURRENT, ALL_EXCEPT_FIRST
+
+  check:
+    description: "チェックボックス操作"
+    options:
+      selector: string
+      selector_type: enum
+      action: enum                 # CHECK, UNCHECK, TOGGLE
+
+  # --- フロー制御 ---
+  if:
+    description: "条件分岐開始"
+    options:
+      condition: string            # 条件式（例: ${count} > 0）
+      operator: enum               # EQUALS, NOT_EQUALS, CONTAINS, GREATER, LESS, etc.
+
+  else_if:
+    description: "追加条件"
+    options:
+      condition: string
+
+  else:
+    description: "それ以外"
+    options: {}
+
+  end_if:
+    description: "条件分岐終了"
+    options: {}
+
+  while:
+    description: "ループ開始"
+    options:
+      condition: string            # 継続条件
+      max_iterations: integer      # 最大回数（安全装置）
+
+  end_while:
+    description: "ループ終了"
+    options: {}
+
+  loop:
+    description: "回数ループ"
+    options:
+      count: integer               # ループ回数
+      variable: string             # カウンタ変数名
+
+  break:
+    description: "ループ中断"
+    options: {}
+
+  try:
+    description: "例外処理開始"
+    options: {}
+
+  catch:
+    description: "例外ハンドラ"
+    options:
+      error_variable: string       # エラー情報格納変数
+
+  end_try:
+    description: "例外処理終了"
+    options: {}
+
+  # --- ウィンドウ操作 ---
+  switch_window:
+    description: "ウィンドウ切り替え"
+    options:
+      title: string                # ウィンドウタイトル（部分一致）
+      match_type: enum             # EXACT, CONTAINS, REGEX
+
+  go_to_tab:
+    description: "タブ切り替え"
+    options:
+      index: integer               # タブインデックス（0始まり）
+
+  # --- 入力操作 ---
+  send_keys:
+    description: "キー送信"
+    options:
+      keys: string                 # キー（例: {ENTER}, {TAB}, {CTRL+A}）
+
+  paste:
+    description: "ペースト"
+    options:
+      text: string                 # 貼り付けるテキスト
+
+  type:
+    description: "タイプ入力（キーボードシミュレーション）"
+    options:
+      text: string
+      delay: integer               # キー間遅延（ミリ秒）
+
+  # --- 画面操作 ---
+  find:
+    description: "画像/テキスト検索"
+    options:
+      type: enum                   # IMAGE, TEXT
+      target: string               # 画像パス or 検索テキスト
+      action: enum                 # CLICK, WAIT, VERIFY
+      timeout: integer
+
+  wait_for_screen_calms:
+    description: "画面安定待機"
+    options:
+      timeout: integer             # タイムアウト（秒）
+
+  # --- その他 ---
+  comment:
+    description: "コメント"
+    options:
+      text: string
+
+  script_exit:
+    description: "スクリプト終了"
+    options:
+      status: enum                 # SUCCESS, ERROR
+      message: string
+
+  send_mail:
+    description: "メール送信"
+    options:
+      to: string
+      subject: string
+      body: string
+      attachments: list            # 添付ファイルパス
+
+  screen_record_start:
+    description: "画面録画開始"
+    options:
+      output_path: string
+      quality: enum                # LOW, MEDIUM, HIGH
+
+  screen_record_end:
+    description: "画面録画終了"
+    options: {}
+
+  monitoring_start:
+    description: "モニタリング開始"
+    options: {}
+
+  monitoring_end:
+    description: "モニタリング終了"
+    options: {}
