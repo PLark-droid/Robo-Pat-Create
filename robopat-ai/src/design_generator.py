@@ -477,6 +477,12 @@ def run_design_wizard():
     """
     対話型設計ウィザードを実行
     """
+    # readline有効化（入力補助）
+    try:
+        import readline
+    except ImportError:
+        pass
+
     generator = DesignGenerator()
 
     print("=" * 60)
@@ -486,33 +492,32 @@ def run_design_wizard():
     print("自然言語で自動化したい業務を入力してください。")
     print("AIが基本設計 → 詳細設計 → スクリプト + 手順書 を生成します。")
     print("")
-    print("終了するには 'quit' または 'exit' を入力してください。")
     print("-" * 60)
-    print("")
 
     # Step 1: 要件入力
+    print("")
     print("【Step 1/5】自動化要件を入力してください")
-    print("（複数行入力可。入力終了は空行でEnter）")
     print("")
 
-    lines = []
-    while True:
-        try:
-            line = input()
-            if line.strip().lower() in ['quit', 'exit', 'q']:
-                print("終了します。")
-                return
-            if not line and lines:
-                break
-            lines.append(line)
-        except KeyboardInterrupt:
-            print("\n終了します。")
-            return
-
-    requirement = "\n".join(lines).strip()
-    if not requirement:
-        print("要件が入力されませんでした。終了します。")
+    try:
+        requirement = input("要件 > ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print("\n終了します。")
         return
+
+    if not requirement or requirement.lower() in ['quit', 'exit', 'q']:
+        print("終了します。")
+        return
+
+    # 追加入力オプション
+    print("")
+    print("追加情報があれば入力してください（なければそのままEnter）:")
+    try:
+        extra = input("追加 > ").strip()
+        if extra and extra.lower() not in ['quit', 'exit', 'q']:
+            requirement = f"{requirement}\n{extra}"
+    except (KeyboardInterrupt, EOFError):
+        pass
 
     # Step 2: 基本設計生成
     print("")
