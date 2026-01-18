@@ -38,6 +38,7 @@ from bwnp_packager import BWNPPackager, create_bwnp, extract_bwnp
 from bwn_parser import BWNParser, parse_bwn
 from script_exporter import ScriptExporter, export_script
 from bwn_patcher import BWNPatcher, create_from_template, patch_with_json, analyze_bwnp
+from design_generator import DesignGenerator, run_design_wizard
 
 
 def cmd_generate(args):
@@ -278,6 +279,11 @@ def cmd_analyze(args):
     analyze_bwnp(args.bwnp_file)
 
 
+def cmd_design(args):
+    """対話型設計ウィザード（基本設計→詳細設計→承認→成果物生成）"""
+    run_design_wizard()
+
+
 def cmd_ai_patch(args):
     """AIを使って自然言語からパッチを生成して適用"""
     print(f"AI パッチ生成中...")
@@ -424,6 +430,9 @@ def main():
     p_analyze = subparsers.add_parser('analyze', help='既存の.bwnpを分析')
     p_analyze.add_argument('bwnp_file', help='分析対象の.bwnpファイル')
 
+    # design - 対話型設計ウィザード
+    p_design = subparsers.add_parser('design', help='対話型設計ウィザード（基本設計→詳細設計→成果物生成）')
+
     # ai-patch - AIを使って自然言語でパッチ
     p_ai_patch = subparsers.add_parser('ai-patch', help='AIを使って自然言語でパッチ生成')
     p_ai_patch.add_argument('instruction', help='変更内容の指示')
@@ -450,6 +459,8 @@ def main():
         cmd_patch(args)
     elif args.command == 'analyze':
         cmd_analyze(args)
+    elif args.command == 'design':
+        cmd_design(args)
     elif args.command == 'ai-patch':
         cmd_ai_patch(args)
     else:

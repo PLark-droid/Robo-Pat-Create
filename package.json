@@ -8,7 +8,8 @@
     "build": "tsc",
     "test": "vitest",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "agents:parallel:exec": "tsx src/agents/parallel-executor.ts"
   },
   "keywords": [
     "agentic-os",
@@ -16,7 +17,9 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
