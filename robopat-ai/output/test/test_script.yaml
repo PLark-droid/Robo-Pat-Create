@@ -17,417 +17,245 @@ project:
 
     '
 variables:
-- name: SUUMO_LOGIN_ID
+- name: login_id
   type: STRING
   default: ''
-- name: SUUMO_PASSWORD
+- name: login_password
   type: STRING
   default: ''
-- name: PROCESS_DATE
+- name: today_date
   type: STRING
   default: ''
-- name: SEARCH_DATE_FROM
-  type: STRING
-  default: ''
-- name: LOGIN_RETRY_COUNT
-  type: STRING
-  default: '0'
-- name: LOGIN_STATUS
-  type: STRING
-  default: ''
-- name: NEW_INQUIRY_DATA_JSON
+- name: inquiry_data_json
   type: STRING
   default: '[]'
-- name: DATA_COUNT
+- name: inquiry_count
   type: STRING
   default: '0'
-- name: EXCEL_FILE_PATH
-  type: STRING
-  default: C:/RoboPat/反響データ.xlsx
-- name: EXCEL_RESULT
+- name: save_result
   type: STRING
   default: ''
 steps:
 - id: 1
   command: comment
-  comment: === 初期設定・環境変数取得 ===
+  comment: === 初期設定・ログイン ===
   options:
-    text: 処理開始前の初期設定と環境変数からのログイン情報取得
+    text: 環境変数取得、SUUMOサイトへのログイン処理
 - id: 2
   command: comment
-  comment: === SUUMO反響データ自動取得処理開始 ===
-  options: {}
+  comment: 環境変数からログイン情報を取得
+  options:
+    text: === SUUMO反響データ自動取得処理開始 ===
 - id: 3
   command: execute_script
-  comment: 現在日付を取得
+  comment: ログインIDを環境変数から取得
   options:
-    script: new Date().toISOString().split('T')[0]
-    variable: PROCESS_DATE
+    script: return process.env.SUUMO_USER_ID || '';
+    variable: login_id
 - id: 4
   command: execute_script
-  comment: 前日日付を計算（検索開始日）
+  comment: パスワードを環境変数から取得
   options:
-    script: const yesterday = new Date(); yesterday.setDate(yesterday.getDate() -
-      1); return yesterday.toISOString().split('T')[0]
-    variable: SEARCH_DATE_FROM
+    script: return process.env.SUUMO_PASSWORD || '';
+    variable: login_password
 - id: 5
-  command: execute_script
-  comment: 環境変数からSUUMOログインIDを取得
-  options:
-    script: process.env.SUUMO_LOGIN_ID || ''
-    variable: SUUMO_LOGIN_ID
-- id: 6
-  command: execute_script
-  comment: 環境変数からSUUMOパスワードを取得
-  options:
-    script: process.env.SUUMO_PASSWORD || ''
-    variable: SUUMO_PASSWORD
-- id: 7
   command: if
-  comment: ログイン情報の確認
+  comment: ログイン情報が取得できているかチェック
   options:
-    condition: ${SUUMO_LOGIN_ID} == '' || ${SUUMO_PASSWORD} == ''
-- id: 8
-  command: send_mail
-  comment: ログイン情報エラー通知
-  options:
-    to: admin@company.com
-    subject: 【エラー】SUUMO自動取得：ログイン情報未設定
-    body: 環境変数にSUUMO_LOGIN_IDまたはSUUMO_PASSWORDが設定されていません。
-- id: 9
+    condition: login_id == '' || login_password == ''
+- id: 6
   command: script_exit
-  comment: ログイン情報エラーで処理終了
+  comment: ログイン情報が不足している場合は終了
   options:
-    status: 1
-    message: ログイン情報が取得できません
-- id: 10
+    status: '1'
+    message: 環境変数からログイン情報を取得できませんでした
+- id: 7
   command: end_if
-  comment: ログイン情報確認終了
+  comment: 条件分岐終了
   options: {}
-- id: 11
-  command: comment
-  comment: === SUUMOログイン処理 ===
-  options:
-    text: SUUMO業務支援サイトへのログイン処理（リトライ機能付き）
-- id: 12
-  command: comment
-  comment: === SUUMOログイン処理開始 ===
-  options: {}
-- id: 13
-  command: execute_script
-  comment: ログイン試行回数初期化
-  options:
-    script: '0'
-    variable: LOGIN_RETRY_COUNT
-- id: 14
-  command: while
-  comment: ログイン処理（最大3回試行）
-  options:
-    condition: ${LOGIN_RETRY_COUNT} < 3
-- id: 15
-  command: try
-  comment: ログイン試行開始
-  options: {}
-- id: 16
+- id: 8
   command: open_chrome
-  comment: SUUMO業務支援サイトを開く（※実際のURLは環境に応じて調整）
+  comment: SUUMO業務支援サイトを開く
   options:
-    url: https://business.suumo.jp/login
+    url: https://suumo.jp/
     profile: default
     headless: false
-- id: 17
+- id: 9
   command: wait_for_screen_calms
-  comment: ページ読み込み待機
+  comment: 画面が安定するまで待機
   options: {}
-- id: 18
+- id: 10
+  command: comment
+  comment: === ログイン実行 ===
+  options:
+    text: SUUMOサイトでのログイン処理
+- id: 11
+  command: click
+  comment: ログインボタンをクリック（実際のセレクタに調整要）
+  options:
+    selector: a[href*='login']
+    selector_type: css
+    click_type: single
+    wait_timeout: 10
+- id: 12
   command: input_text
-  comment: ログインID入力（※セレクタは実際の画面に合わせて調整）
+  comment: ログインIDを入力（実際のセレクタに調整要）
   options:
     selector: input[name='loginId']
     selector_type: css
-    text: ${SUUMO_LOGIN_ID}
+    text: ${login_id}
     clear_first: true
-- id: 19
+- id: 13
   command: input_password
-  comment: パスワード入力（※セレクタは実際の画面に合わせて調整）
+  comment: パスワードを入力（実際のセレクタに調整要）
   options:
     selector: input[name='password']
     selector_type: css
-    password: ${SUUMO_PASSWORD}
-- id: 20
+    password: ${login_password}
+- id: 14
   command: click
-  comment: ログインボタンクリック（※セレクタは実際の画面に合わせて調整）
+  comment: ログイン実行ボタンをクリック（実際のセレクタに調整要）
   options:
     selector: button[type='submit']
     selector_type: css
-    click_type: click
-    wait_timeout: 10
-- id: 21
-  command: wait_for_screen_calms
-  comment: ログイン処理待機
-  options: {}
-- id: 22
-  command: get_text
-  comment: ログイン状態確認（※セレクタは実際の画面に合わせて調整）
-  options:
-    selector: h1, .user-info, .dashboard-title
-    variable: LOGIN_STATUS
-- id: 23
-  command: if
-  comment: ログイン成功判定
-  options:
-    condition: ${LOGIN_STATUS} contains 'ダッシュボード' || ${LOGIN_STATUS} contains 'メニュー'
-- id: 24
-  command: break
-  comment: ログイン成功でループ終了
-  options: {}
-- id: 25
-  command: end_if
-  comment: ログイン成功判定終了
-  options: {}
-- id: 26
-  command: catch
-  comment: ログインエラー処理
-  options: {}
-- id: 27
-  command: execute_script
-  comment: リトライ回数増加
-  options:
-    script: parseInt('${LOGIN_RETRY_COUNT}') + 1
-    variable: LOGIN_RETRY_COUNT
-- id: 28
-  command: end_try
-  comment: ログイン試行終了
-  options: {}
-- id: 29
-  command: end_while
-  comment: ログイン試行ループ終了
-  options: {}
-- id: 30
-  command: if
-  comment: ログイン失敗判定
-  options:
-    condition: ${LOGIN_RETRY_COUNT} >= 3
-- id: 31
-  command: send_mail
-  comment: ログイン失敗通知
-  options:
-    to: admin@company.com
-    subject: 【エラー】SUUMO自動取得：ログイン失敗
-    body: SUUMOへのログインに3回失敗しました。ログイン情報を確認してください。
-- id: 32
-  command: script_exit
-  comment: ログイン失敗で処理終了
-  options:
-    status: 1
-    message: SUUMOログインに失敗しました
-- id: 33
-  command: end_if
-  comment: ログイン失敗判定終了
-  options: {}
-- id: 34
-  command: comment
-  comment: === 反響データ取得処理 ===
-  options:
-    text: 反響データページへ移動し、新着データを検索・取得
-- id: 35
-  command: comment
-  comment: === 反響データ取得処理開始 ===
-  options: {}
-- id: 36
-  command: click
-  comment: 反響管理メニューをクリック（※セレクタは実際の画面に合わせて調整）
-  options:
-    selector: a[href*='inquiry'], .menu-inquiry
-    selector_type: css
-    click_type: click
-    wait_timeout: 10
-- id: 37
-  command: wait_for_screen_calms
-  comment: 反響データページ読み込み待機
-  options: {}
-- id: 38
-  command: input_text
-  comment: 検索開始日入力（※セレクタは実際の画面に合わせて調整）
-  options:
-    selector: input[name='dateFrom']
-    selector_type: css
-    text: ${SEARCH_DATE_FROM}
-    clear_first: true
-- id: 39
-  command: input_text
-  comment: 検索終了日入力（※セレクタは実際の画面に合わせて調整）
-  options:
-    selector: input[name='dateTo']
-    selector_type: css
-    text: ${PROCESS_DATE}
-    clear_first: true
-- id: 40
-  command: click
-  comment: 検索実行（※セレクタは実際の画面に合わせて調整）
-  options:
-    selector: button[type='submit'], .search-btn
-    selector_type: css
-    click_type: click
+    click_type: single
     wait_timeout: 15
-- id: 41
+- id: 15
   command: wait_for_screen_calms
-  comment: 検索結果読み込み待機
+  comment: ログイン完了まで待機
   options: {}
-- id: 42
+- id: 16
+  command: comment
+  comment: === 反響データ取得 ===
+  options:
+    text: 反響データ画面への遷移と新着データの取得
+- id: 17
   command: execute_script
-  comment: 反響データを配列形式で取得（※実際のDOM構造に合わせて調整）
+  comment: 本日の日付を取得
   options:
-    script: 'const rows = document.querySelectorAll(''.inquiry-list tbody tr''); const
-      data = []; rows.forEach(row => { const cols = row.querySelectorAll(''td'');
-      if(cols.length >= 5) { data.push({ date: cols[0].textContent.trim(), property:
-      cols[1].textContent.trim(), customer: cols[2].textContent.trim(), contact: cols[3].textContent.trim(),
-      status: cols[4].textContent.trim() }); } }); return JSON.stringify(data);'
-    variable: NEW_INQUIRY_DATA_JSON
-- id: 43
-  command: execute_script
-  comment: 取得データ件数確認
-  options:
-    script: const data = JSON.parse('${NEW_INQUIRY_DATA_JSON}' || '[]'); return data.length;
-    variable: DATA_COUNT
-- id: 44
-  command: if
-  comment: 新着データ存在確認
-  options:
-    condition: ${DATA_COUNT} > 0
-- id: 45
-  command: comment
-  comment: '新着データが見つかりました: ${DATA_COUNT}件'
-  options: {}
-- id: 46
-  command: else
-  comment: 新着データなしの場合
-  options: {}
-- id: 47
-  command: comment
-  comment: 新着データはありませんでした
-  options: {}
-- id: 48
-  command: close_tab
-  comment: ブラウザを閉じる
-  options: {}
-- id: 49
-  command: script_exit
-  comment: 新着データなしで正常終了
-  options:
-    status: 0
-    message: 新着データはありませんでした
-- id: 50
-  command: end_if
-  comment: 新着データ存在確認終了
-  options: {}
-- id: 51
-  command: comment
-  comment: === Excelファイル更新処理 ===
-  options:
-    text: 取得したデータをExcelファイルに追記保存
-- id: 52
-  command: comment
-  comment: === Excelファイル更新処理開始 ===
-  options: {}
-- id: 53
-  command: try
-  comment: Excelファイル処理開始
-  options: {}
-- id: 54
-  command: execute_script
-  comment: Excelファイルパス設定
-  options:
-    script: '''C:/RoboPat/反響データ.xlsx'''
-    variable: EXCEL_FILE_PATH
-- id: 55
-  command: execute_script
-  comment: Excel操作ライブラリ使用してファイル更新（※実際の実装は環境に依存）
-  options:
-    script: const Excel = require('exceljs'); const workbook = new Excel.Workbook();
-      const filePath = '${EXCEL_FILE_PATH}'; const data = JSON.parse('${NEW_INQUIRY_DATA_JSON}');
-      let worksheet; try { await workbook.xlsx.readFile(filePath); worksheet = workbook.getWorksheet(1)
-      || workbook.addWorksheet('反響データ'); } catch(e) { worksheet = workbook.addWorksheet('反響データ');
-      worksheet.addRow(['日付', '物件名', '顧客名', '連絡先', 'ステータス', '取得日時']); } data.forEach(row
-      => { worksheet.addRow([row.date, row.property, row.customer, row.contact, row.status,
-      new Date().toLocaleString('ja-JP')]); }); await workbook.xlsx.writeFile(filePath);
-      return 'Excel更新完了';
-    variable: EXCEL_RESULT
-- id: 56
-  command: send_mail
-  comment: 処理完了通知
-  options:
-    to: admin@company.com
-    subject: 【完了】SUUMO反響データ自動取得
-    body: '処理日: ${PROCESS_DATE}
-
-      取得件数: ${DATA_COUNT}件
-
-      ファイル: ${EXCEL_FILE_PATH}
-
-
-      処理が正常に完了しました。'
-- id: 57
-  command: catch
-  comment: Excelファイル処理エラー
-  options: {}
-- id: 58
-  command: send_mail
-  comment: Excelファイルエラー通知
-  options:
-    to: admin@company.com
-    subject: 【エラー】SUUMO自動取得：Excelファイル処理失敗
-    body: 'Excelファイル（${EXCEL_FILE_PATH}）への書き込み処理でエラーが発生しました。
-
-      ファイルの書き込み権限やパスを確認してください。'
-- id: 59
-  command: end_try
-  comment: Excelファイル処理終了
-  options: {}
-- id: 60
-  command: comment
-  comment: === 終了処理 ===
-  options:
-    text: ログアウト処理と後処理
-- id: 61
-  command: comment
-  comment: === 終了処理開始 ===
-  options: {}
-- id: 62
-  command: try
-  comment: ログアウト処理開始
-  options: {}
-- id: 63
+    script: return new Date().toISOString().split('T')[0];
+    variable: today_date
+- id: 18
   command: click
-  comment: ログアウトボタンクリック（※セレクタは実際の画面に合わせて調整）
+  comment: 反響・問い合わせ管理メニューをクリック（実際のセレクタに調整要）
   options:
-    selector: .logout-btn, a[href*='logout']
+    selector: a[href*='inquiry']
     selector_type: css
-    click_type: click
-    wait_timeout: 5
-- id: 64
+    click_type: single
+    wait_timeout: 10
+- id: 19
   command: wait_for_screen_calms
-  comment: ログアウト処理待機
+  comment: 反響データ画面の読み込み完了を待機
   options: {}
-- id: 65
-  command: catch
-  comment: ログアウトエラー（無視）
+- id: 20
+  command: input_text
+  comment: 検索開始日に本日の日付を入力（実際のセレクタに調整要）
+  options:
+    selector: input[name='fromDate']
+    selector_type: css
+    text: ${today_date}
+    clear_first: true
+- id: 21
+  command: input_text
+  comment: 検索終了日に本日の日付を入力（実際のセレクタに調整要）
+  options:
+    selector: input[name='toDate']
+    selector_type: css
+    text: ${today_date}
+    clear_first: true
+- id: 22
+  command: click
+  comment: 検索ボタンをクリック（実際のセレクタに調整要）
+  options:
+    selector: button[type='submit'].search-btn
+    selector_type: css
+    click_type: single
+    wait_timeout: 10
+- id: 23
+  command: wait_for_screen_calms
+  comment: 検索結果の表示完了を待機
   options: {}
-- id: 66
-  command: end_try
-  comment: ログアウト処理終了
-  options: {}
-- id: 67
-  command: close_tab
-  comment: ブラウザを閉じる
-  options: {}
-- id: 68
+- id: 24
   command: comment
-  comment: === SUUMO反響データ自動取得処理完了 ===
-  options: {}
-- id: 69
+  comment: === データ抽出とExcel保存 ===
+  options:
+    text: 反響データの抽出とExcelファイルへの追記
+- id: 25
+  command: execute_script
+  comment: 反響データテーブルからデータを抽出（実際の構造に調整要）
+  options:
+    script: 'var rows = document.querySelectorAll(''table.inquiry-table tbody tr'');
+      var data = []; for(var i = 0; i < rows.length; i++) { var cells = rows[i].querySelectorAll(''td'');
+      if(cells.length > 0) { data.push({ date: cells[0].textContent.trim(), name:
+      cells[1].textContent.trim(), phone: cells[2].textContent.trim(), email: cells[3].textContent.trim(),
+      property: cells[4].textContent.trim(), comment: cells[5].textContent.trim()
+      }); } } return JSON.stringify(data);'
+    variable: inquiry_data_json
+- id: 26
+  command: execute_script
+  comment: JSONデータを解析して件数をチェック
+  options:
+    script: var data = JSON.parse('${inquiry_data_json}' || '[]'); return data.length;
+    variable: inquiry_count
+- id: 27
+  command: if
+  comment: 新着データが0件の場合の処理
+  options:
+    condition: inquiry_count == 0
+- id: 28
+  command: comment
+  comment: 新着反響データなしの場合はメッセージ出力
+  options:
+    text: 本日の新着反響データはありませんでした
+- id: 29
   command: script_exit
   comment: 正常終了
   options:
-    status: 0
-    message: 処理が正常に完了しました
+    status: '0'
+    message: 新着反響データなし - 処理正常終了
+- id: 30
+  command: end_if
+  comment: 条件分岐終了
+  options: {}
+- id: 31
+  command: execute_script
+  comment: Excelファイル操作用のスクリプト実行（実際のライブラリに調整要）
+  options:
+    script: 'var XLSX = require(''xlsx''); var fs = require(''fs''); var filePath
+      = ''C:/RoboPat/反響データ.xlsx''; var workbook; try { workbook = XLSX.readFile(filePath);
+      } catch(e) { workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook,
+      XLSX.utils.aoa_to_sheet([[''日付'',''氏名'',''電話番号'',''メールアドレス'',''物件名'',''備考'']]),
+      ''反響データ''); } var worksheet = workbook.Sheets[''反響データ'']; var data = JSON.parse(''${inquiry_data_json}'');
+      var range = XLSX.utils.decode_range(worksheet[''!ref'']); for(var i = 0; i <
+      data.length; i++) { var newRow = range.e.r + 1 + i; XLSX.utils.sheet_add_aoa(worksheet,
+      [[data[i].date, data[i].name, data[i].phone, data[i].email, data[i].property,
+      data[i].comment]], {origin: ''A'' + (newRow + 1)}); } XLSX.writeFile(workbook,
+      filePath); return data.length + ''件のデータを追加しました'';'
+    variable: save_result
+- id: 32
+  command: comment
+  comment: 保存結果をログ出力
+  options:
+    text: 'Excel保存結果: ${save_result}'
+- id: 33
+  command: comment
+  comment: === 終了処理 ===
+  options:
+    text: ブラウザ終了と完了通知
+- id: 34
+  command: close_tab
+  comment: ブラウザタブを閉じる
+  options: {}
+- id: 35
+  command: send_mail
+  comment: 完了通知メール送信（オプション）
+  options:
+    to: admin@company.com
+    subject: SUUMO反響データ取得完了
+    body: '本日のSUUMO反響データ取得が完了しました。\n取得件数: ${inquiry_count}件\n保存先: C:/RoboPat/反響データ.xlsx'
+- id: 36
+  command: script_exit
+  comment: 処理正常終了
+  options:
+    status: '0'
+    message: SUUMO反響データ取得処理が正常に完了しました

@@ -472,6 +472,246 @@ class DesignGenerator:
         lines.append("=" * 60)
         return "\n".join(lines)
 
+    def generate_robopat_guide(self) -> str:
+        """
+        Robo-Pat DXでコピペしやすい詳細ガイドを生成
+
+        Returns:
+            Markdown形式のガイド
+        """
+        if not self.detailed_design:
+            return "詳細設計が生成されていません"
+
+        dd = self.detailed_design
+        lines = []
+
+        lines.append(f"# {dd.get('project_name', 'RoboPatScript')} - Robo-Pat DX 作成ガイド")
+        lines.append("")
+        lines.append("このガイドを参照しながらRobo-Pat DXでスクリプトを作成してください。")
+        lines.append("各セクションの値はそのままコピペできます。")
+        lines.append("")
+
+        # 変数セクション
+        lines.append("---")
+        lines.append("## 1. 変数の設定")
+        lines.append("")
+        lines.append("Robo-Pat DX の「変数」タブで以下を設定してください：")
+        lines.append("")
+        lines.append("| 変数名 | 型 | 初期値 | 説明 |")
+        lines.append("|--------|-----|--------|------|")
+
+        for var in dd.get("variables", []):
+            name = var.get("name", "")
+            vtype = var.get("type", "STRING")
+            default = var.get("default", "")
+            desc = var.get("description", "")
+            lines.append(f"| `{name}` | {vtype} | `{default}` | {desc} |")
+
+        lines.append("")
+        lines.append("### コピペ用（変数名）")
+        lines.append("```")
+        for var in dd.get("variables", []):
+            lines.append(var.get("name", ""))
+        lines.append("```")
+        lines.append("")
+
+        # タブとコマンドセクション
+        lines.append("---")
+        lines.append("## 2. コマンドの作成")
+        lines.append("")
+
+        step_num = 1
+        for tab in dd.get("tabs", []):
+            lines.append(f"### タブ: {tab['name']}")
+            lines.append(f"> {tab.get('description', '')}")
+            lines.append("")
+
+            for step in tab.get("steps", []):
+                cmd = step.get("command", "")
+                comment = step.get("comment", "")
+                options = step.get("options", {})
+
+                lines.append(f"#### Step {step_num}: {cmd}")
+                lines.append(f"**説明:** {comment}")
+                lines.append("")
+
+                # コマンド別の詳細
+                if cmd == "open_chrome":
+                    url = options.get("url", "")
+                    lines.append("**操作:** `Web操作` → `Chromeを開く`")
+                    lines.append("")
+                    lines.append("**URL（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(url)
+                    lines.append(f"```")
+
+                elif cmd == "click":
+                    selector = options.get("selector", "")
+                    sel_type = options.get("selector_type", "css")
+                    lines.append("**操作:** `Web操作` → `クリック`")
+                    lines.append("")
+                    lines.append(f"**セレクタタイプ:** {sel_type.upper()}")
+                    lines.append("")
+                    lines.append("**セレクタ（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(selector)
+                    lines.append(f"```")
+
+                elif cmd == "input_text":
+                    selector = options.get("selector", "")
+                    sel_type = options.get("selector_type", "css")
+                    text = options.get("text", "")
+                    lines.append("**操作:** `Web操作` → `テキスト入力`")
+                    lines.append("")
+                    lines.append(f"**セレクタタイプ:** {sel_type.upper()}")
+                    lines.append("")
+                    lines.append("**セレクタ（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(selector)
+                    lines.append(f"```")
+                    lines.append("")
+                    lines.append("**入力値（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(text)
+                    lines.append(f"```")
+
+                elif cmd == "input_password":
+                    selector = options.get("selector", "")
+                    lines.append("**操作:** `Web操作` → `パスワード入力`")
+                    lines.append("")
+                    lines.append("**セレクタ（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(selector)
+                    lines.append(f"```")
+
+                elif cmd == "get_text":
+                    selector = options.get("selector", "")
+                    variable = options.get("variable", "")
+                    lines.append("**操作:** `Web操作` → `テキスト取得`")
+                    lines.append("")
+                    lines.append("**セレクタ（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(selector)
+                    lines.append(f"```")
+                    lines.append("")
+                    lines.append(f"**格納変数:** `{variable}`")
+
+                elif cmd == "execute_script":
+                    script = options.get("script", "")
+                    variable = options.get("variable", "")
+                    lines.append("**操作:** `Web操作` → `JavaScript実行`")
+                    lines.append("")
+                    lines.append("**スクリプト（コピペ用）:**")
+                    lines.append(f"```javascript")
+                    lines.append(script)
+                    lines.append(f"```")
+                    if variable:
+                        lines.append("")
+                        lines.append(f"**格納変数:** `{variable}`")
+
+                elif cmd == "if":
+                    condition = options.get("condition", "")
+                    lines.append("**操作:** `フロー制御` → `条件分岐(IF)`")
+                    lines.append("")
+                    lines.append("**条件（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(condition)
+                    lines.append(f"```")
+
+                elif cmd == "while":
+                    condition = options.get("condition", "")
+                    lines.append("**操作:** `フロー制御` → `繰り返し(WHILE)`")
+                    lines.append("")
+                    lines.append("**条件（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(condition)
+                    lines.append(f"```")
+
+                elif cmd == "comment":
+                    text = options.get("text", comment)
+                    lines.append("**操作:** `基本` → `コメント`")
+                    lines.append("")
+                    lines.append("**コメント（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(text)
+                    lines.append(f"```")
+
+                elif cmd == "send_mail":
+                    to = options.get("to", "")
+                    subject = options.get("subject", "")
+                    body = options.get("body", "")
+                    lines.append("**操作:** `基本` → `メール送信`")
+                    lines.append("")
+                    lines.append("**宛先（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(to)
+                    lines.append(f"```")
+                    lines.append("")
+                    lines.append("**件名（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(subject)
+                    lines.append(f"```")
+                    lines.append("")
+                    lines.append("**本文（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(body)
+                    lines.append(f"```")
+
+                elif cmd == "script_exit":
+                    status = options.get("status", "0")
+                    message = options.get("message", "")
+                    lines.append("**操作:** `フロー制御` → `スクリプト終了`")
+                    lines.append("")
+                    lines.append(f"**終了ステータス:** {status}")
+                    lines.append("")
+                    lines.append("**メッセージ（コピペ用）:**")
+                    lines.append(f"```")
+                    lines.append(message)
+                    lines.append(f"```")
+
+                elif cmd in ["else", "else_if", "end_if", "end_while", "try", "catch", "end_try", "break"]:
+                    cmd_map = {
+                        "else": "`フロー制御` → `ELSE`",
+                        "else_if": "`フロー制御` → `ELSE IF`",
+                        "end_if": "`フロー制御` → `END IF`",
+                        "end_while": "`フロー制御` → `END WHILE`",
+                        "try": "`フロー制御` → `TRY`",
+                        "catch": "`フロー制御` → `CATCH`",
+                        "end_try": "`フロー制御` → `END TRY`",
+                        "break": "`フロー制御` → `BREAK`",
+                    }
+                    lines.append(f"**操作:** {cmd_map.get(cmd, cmd)}")
+
+                elif cmd == "wait_for_screen_calms":
+                    lines.append("**操作:** `基本` → `画面安定待ち`")
+
+                elif cmd == "close_tab":
+                    lines.append("**操作:** `Web操作` → `タブを閉じる`")
+
+                else:
+                    # その他のコマンド
+                    lines.append(f"**操作:** `{cmd}`")
+                    if options:
+                        lines.append("")
+                        lines.append("**オプション:**")
+                        for k, v in options.items():
+                            lines.append(f"- {k}: `{v}`")
+
+                lines.append("")
+                lines.append("---")
+                lines.append("")
+                step_num += 1
+
+        # 補足情報
+        lines.append("## 3. 注意事項")
+        lines.append("")
+        lines.append("- セレクタ（XPath/CSS）は実際の画面に合わせて調整が必要です")
+        lines.append("- 変数名は `^変数名^` の形式で使用します")
+        lines.append("- 画面遷移後は「画面安定待ち」を入れることを推奨します")
+        lines.append("")
+
+        return "\n".join(lines)
+
 
 def run_design_wizard():
     """
@@ -640,6 +880,13 @@ def run_design_wizard():
         json.dump(design_data, f, ensure_ascii=False, indent=2)
     print(f"  [✓] 設計データ: {design_path}")
 
+    # Robo-Pat DX 作成ガイド生成
+    guide_content = generator.generate_robopat_guide()
+    guide_path = output_dir / f"{safe_name}_{timestamp}_作成ガイド.md"
+    with open(guide_path, "w", encoding="utf-8") as f:
+        f.write(guide_content)
+    print(f"  [✓] Robo-Pat DX 作成ガイド: {guide_path}")
+
     # .bwnp生成オプション
     print("")
     print("【オプション】.bwnpファイルを生成しますか？")
@@ -681,26 +928,17 @@ def run_design_wizard():
     print("=" * 60)
     print("")
 
-    if bwnp_path and bwnp_path.exists():
-        print("成果物:")
-        print(f"  - Robo-Patスクリプト: {bwnp_path}")
-        print(f"  - 設定手順書: {manual_path}")
-        print(f"  - 設計データ: {design_path}")
-        print("")
-        print("次のステップ:")
-        print(f"  1. Robo-Pat DX で {bwnp_path} を開く")
-        print(f"  2. {manual_path} を参考に設定・テスト")
-    else:
-        print("成果物:")
-        print(f"  - YAML スクリプト: {yaml_path}")
-        print(f"  - 設定手順書: {manual_path}")
-        print(f"  - 設計データ: {design_path}")
-        print("")
-        print("次のステップ:")
-        print(f"  1. {yaml_path} を確認・編集")
-        print(f"  2. python robopat_ai.py compile {yaml_path} output.bwnp")
-        print(f"  3. Robo-Pat DX で output.bwnp を開いて調整")
-        print(f"  4. {manual_path} を参考に設定・テスト")
+    print("成果物:")
+    print(f"  - Robo-Pat DX 作成ガイド: {guide_path} ★メイン")
+    print(f"  - 設定手順書: {manual_path}")
+    print(f"  - 設計データ: {design_path}")
+    print(f"  - YAML スクリプト: {yaml_path}")
+    print("")
+    print("次のステップ:")
+    print(f"  1. {guide_path} を開く")
+    print(f"  2. ガイドを見ながらRobo-Pat DXでスクリプトを作成")
+    print(f"  3. 各Stepのコピペ用テキストをそのまま貼り付け")
+    print(f"  4. {manual_path} を参考に設定・テスト")
     print("")
 
 
