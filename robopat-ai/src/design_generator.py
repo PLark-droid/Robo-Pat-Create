@@ -635,16 +635,67 @@ def run_design_wizard():
         json.dump(design_data, f, ensure_ascii=False, indent=2)
     print(f"  [✓] 設計データ: {design_path}")
 
+    # .bwnp生成オプション
+    print("")
+    print("【オプション】.bwnpファイルを生成しますか？")
+    print("  [Y] テンプレートから.bwnpを生成")
+    print("  [N] スキップ（後で手動生成）")
+    print("")
+
+    bwnp_path = None
+    choice = input("選択 (Y/N): ").strip().upper()
+
+    if choice == 'Y':
+        # テンプレートファイルのパス
+        default_template = Path(__file__).parent.parent.parent / "script" / "SUUMO反響記録ロボット.bwnp"
+
+        print(f"  テンプレート: {default_template}")
+
+        if default_template.exists():
+            try:
+                # bwn_patcherを使用してテンプレートから生成
+                from bwn_patcher import create_from_template
+
+                bwnp_path = output_dir / f"{safe_name}_{timestamp}.bwnp"
+                create_from_template(
+                    str(default_template),
+                    str(bwnp_path),
+                    project_name
+                )
+                print(f"  [✓] Robo-Patスクリプト: {bwnp_path}")
+            except Exception as e:
+                print(f"  [!] .bwnp生成エラー: {e}")
+                print("      後で手動生成してください。")
+        else:
+            print(f"  [!] テンプレートが見つかりません: {default_template}")
+            print("      後で手動生成してください。")
+
     print("")
     print("=" * 60)
     print("  生成完了！")
     print("=" * 60)
     print("")
-    print("次のステップ:")
-    print(f"  1. {yaml_path} を確認・編集")
-    print(f"  2. python robopat_ai.py compile {yaml_path} output.bwnp")
-    print(f"  3. Robo-Pat DX で output.bwnp を開いて調整")
-    print(f"  4. {manual_path} を参考に設定・テスト")
+
+    if bwnp_path and bwnp_path.exists():
+        print("成果物:")
+        print(f"  - Robo-Patスクリプト: {bwnp_path}")
+        print(f"  - 設定手順書: {manual_path}")
+        print(f"  - 設計データ: {design_path}")
+        print("")
+        print("次のステップ:")
+        print(f"  1. Robo-Pat DX で {bwnp_path} を開く")
+        print(f"  2. {manual_path} を参考に設定・テスト")
+    else:
+        print("成果物:")
+        print(f"  - YAML スクリプト: {yaml_path}")
+        print(f"  - 設定手順書: {manual_path}")
+        print(f"  - 設計データ: {design_path}")
+        print("")
+        print("次のステップ:")
+        print(f"  1. {yaml_path} を確認・編集")
+        print(f"  2. python robopat_ai.py compile {yaml_path} output.bwnp")
+        print(f"  3. Robo-Pat DX で output.bwnp を開いて調整")
+        print(f"  4. {manual_path} を参考に設定・テスト")
     print("")
 
 
