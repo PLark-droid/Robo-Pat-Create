@@ -1,0 +1,708 @@
+{
+  "requirement": "\n毎朝9時に、SUUMOの管理画面にログインして、\n新着の反響データ（問い合わせ）を取得し、\nExcelファイルに追記保存する。\n\n対象システム: SUUMO 業務支援サイト\nログイン情報: 環境変数から取得\n出力先: C:/RoboPat/反響データ.xlsx\n",
+  "basic_design": {
+    "project_name": "SUUMO反響データ自動取得",
+    "overview": "毎朝9時にSUUMO管理画面から新着反響データを取得し、Excelファイルに追記保存する自動化",
+    "target_systems": [
+      {
+        "name": "SUUMO 業務支援サイト",
+        "type": "Web",
+        "url_or_path": "https://www.suumo.jp/"
+      },
+      {
+        "name": "反響データExcelファイル",
+        "type": "Excel",
+        "url_or_path": "C:/RoboPat/反響データ.xlsx"
+      }
+    ],
+    "process_flow": [
+      {
+        "step": 1,
+        "name": "SUUMO管理画面ログイン",
+        "description": "環境変数からログイン情報を取得してSUUMO業務支援サイトにログイン",
+        "input": "ログインID、パスワード（環境変数）",
+        "output": "ログイン成功状態"
+      },
+      {
+        "step": 2,
+        "name": "反響データページへ移動",
+        "description": "管理画面内の反響データ一覧ページに移動",
+        "input": "ログイン済み画面",
+        "output": "反響データ一覧画面"
+      },
+      {
+        "step": 3,
+        "name": "新着反響データ検索",
+        "description": "前日以降の新着反響データを検索・抽出",
+        "input": "検索条件（日付範囲）",
+        "output": "新着反響データリスト"
+      },
+      {
+        "step": 4,
+        "name": "データ取得・整理",
+        "description": "反響データの詳細情報を取得し、Excel形式に整理",
+        "input": "反響データリスト",
+        "output": "整理済みデータ（配列）"
+      },
+      {
+        "step": 5,
+        "name": "Excelファイル更新",
+        "description": "既存のExcelファイルを開き、新着データを最終行に追記",
+        "input": "整理済みデータ、既存Excelファイル",
+        "output": "更新済みExcelファイル"
+      },
+      {
+        "step": 6,
+        "name": "ファイル保存・ログアウト",
+        "description": "Excelファイルを保存し、SUUMOサイトからログアウト",
+        "input": "更新済みExcelファイル",
+        "output": "保存完了、処理完了ログ"
+      }
+    ],
+    "variables": [
+      {
+        "name": "SUUMO_LOGIN_ID",
+        "description": "SUUMOログインID",
+        "type": "STRING",
+        "source": "環境変数"
+      },
+      {
+        "name": "SUUMO_PASSWORD",
+        "description": "SUUMOログインパスワード",
+        "type": "STRING",
+        "source": "環境変数"
+      },
+      {
+        "name": "EXCEL_FILE_PATH",
+        "description": "出力先Excelファイルパス",
+        "type": "STRING",
+        "source": "固定値 (C:/RoboPat/反響データ.xlsx)"
+      },
+      {
+        "name": "SEARCH_DATE_FROM",
+        "description": "検索開始日（前日）",
+        "type": "STRING",
+        "source": "システム日付計算"
+      },
+      {
+        "name": "NEW_INQUIRY_DATA",
+        "description": "取得した新着反響データ",
+        "type": "LIST",
+        "source": "Webスクレイピング結果"
+      },
+      {
+        "name": "PROCESS_DATE",
+        "description": "処理実行日",
+        "type": "STRING",
+        "source": "システム日付"
+      }
+    ],
+    "preconditions": [
+      "SUUMO業務支援サイトのアカウントが有効であること",
+      "環境変数にログイン情報が設定されていること",
+      "C:/RoboPatディレクトリが存在すること",
+      "対象Excelファイルが書き込み可能な状態であること",
+      "インターネット接続が安定していること"
+    ],
+    "error_handling": {
+      "strategy": "リトライ（ログイン失敗時は3回まで、データ取得失敗時は2回まで）",
+      "notification": "エラー発生時はログファイルに記録、重要エラーはメール通知"
+    },
+    "estimated_commands": 25
+  },
+  "detailed_design": {
+    "project_name": "SUUMO反響データ自動取得",
+    "tabs": [
+      {
+        "name": "初期設定・環境変数取得",
+        "description": "処理開始前の初期設定と環境変数からのログイン情報取得",
+        "steps": [
+          {
+            "id": 1,
+            "command": "comment",
+            "comment": "=== SUUMO反響データ自動取得処理開始 ===",
+            "options": {}
+          },
+          {
+            "id": 2,
+            "command": "execute_script",
+            "comment": "現在日付を取得",
+            "options": {
+              "script": "new Date().toISOString().split('T')[0]",
+              "variable": "PROCESS_DATE"
+            }
+          },
+          {
+            "id": 3,
+            "command": "execute_script",
+            "comment": "前日日付を計算（検索開始日）",
+            "options": {
+              "script": "const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); return yesterday.toISOString().split('T')[0]",
+              "variable": "SEARCH_DATE_FROM"
+            }
+          },
+          {
+            "id": 4,
+            "command": "execute_script",
+            "comment": "環境変数からSUUMOログインIDを取得",
+            "options": {
+              "script": "process.env.SUUMO_LOGIN_ID || ''",
+              "variable": "SUUMO_LOGIN_ID"
+            }
+          },
+          {
+            "id": 5,
+            "command": "execute_script",
+            "comment": "環境変数からSUUMOパスワードを取得",
+            "options": {
+              "script": "process.env.SUUMO_PASSWORD || ''",
+              "variable": "SUUMO_PASSWORD"
+            }
+          },
+          {
+            "id": 6,
+            "command": "if",
+            "comment": "ログイン情報の確認",
+            "options": {
+              "condition": "${SUUMO_LOGIN_ID} == '' || ${SUUMO_PASSWORD} == ''"
+            }
+          },
+          {
+            "id": 7,
+            "command": "send_mail",
+            "comment": "ログイン情報エラー通知",
+            "options": {
+              "to": "admin@company.com",
+              "subject": "【エラー】SUUMO自動取得：ログイン情報未設定",
+              "body": "環境変数にSUUMO_LOGIN_IDまたはSUUMO_PASSWORDが設定されていません。"
+            }
+          },
+          {
+            "id": 8,
+            "command": "script_exit",
+            "comment": "ログイン情報エラーで処理終了",
+            "options": {
+              "status": 1,
+              "message": "ログイン情報が取得できません"
+            }
+          },
+          {
+            "id": 9,
+            "command": "end_if",
+            "comment": "ログイン情報確認終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "SUUMOログイン処理",
+        "description": "SUUMO業務支援サイトへのログイン処理（リトライ機能付き）",
+        "steps": [
+          {
+            "id": 10,
+            "command": "comment",
+            "comment": "=== SUUMOログイン処理開始 ===",
+            "options": {}
+          },
+          {
+            "id": 11,
+            "command": "execute_script",
+            "comment": "ログイン試行回数初期化",
+            "options": {
+              "script": "0",
+              "variable": "LOGIN_RETRY_COUNT"
+            }
+          },
+          {
+            "id": 12,
+            "command": "while",
+            "comment": "ログイン処理（最大3回試行）",
+            "options": {
+              "condition": "${LOGIN_RETRY_COUNT} < 3"
+            }
+          },
+          {
+            "id": 13,
+            "command": "try",
+            "comment": "ログイン試行開始",
+            "options": {}
+          },
+          {
+            "id": 14,
+            "command": "open_chrome",
+            "comment": "SUUMO業務支援サイトを開く（※実際のURLは環境に応じて調整）",
+            "options": {
+              "url": "https://business.suumo.jp/login",
+              "profile": "default",
+              "headless": false
+            }
+          },
+          {
+            "id": 15,
+            "command": "wait_for_screen_calms",
+            "comment": "ページ読み込み待機",
+            "options": {}
+          },
+          {
+            "id": 16,
+            "command": "input_text",
+            "comment": "ログインID入力（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "input[name='loginId']",
+              "selector_type": "css",
+              "text": "${SUUMO_LOGIN_ID}",
+              "clear_first": true
+            }
+          },
+          {
+            "id": 17,
+            "command": "input_password",
+            "comment": "パスワード入力（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "input[name='password']",
+              "selector_type": "css",
+              "password": "${SUUMO_PASSWORD}"
+            }
+          },
+          {
+            "id": 18,
+            "command": "click",
+            "comment": "ログインボタンクリック（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "button[type='submit']",
+              "selector_type": "css",
+              "click_type": "click",
+              "wait_timeout": 10
+            }
+          },
+          {
+            "id": 19,
+            "command": "wait_for_screen_calms",
+            "comment": "ログイン処理待機",
+            "options": {}
+          },
+          {
+            "id": 20,
+            "command": "get_text",
+            "comment": "ログイン状態確認（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "h1, .user-info, .dashboard-title",
+              "variable": "LOGIN_STATUS"
+            }
+          },
+          {
+            "id": 21,
+            "command": "if",
+            "comment": "ログイン成功判定",
+            "options": {
+              "condition": "${LOGIN_STATUS} contains 'ダッシュボード' || ${LOGIN_STATUS} contains 'メニュー'"
+            }
+          },
+          {
+            "id": 22,
+            "command": "break",
+            "comment": "ログイン成功でループ終了",
+            "options": {}
+          },
+          {
+            "id": 23,
+            "command": "end_if",
+            "comment": "ログイン成功判定終了",
+            "options": {}
+          },
+          {
+            "id": 24,
+            "command": "catch",
+            "comment": "ログインエラー処理",
+            "options": {}
+          },
+          {
+            "id": 25,
+            "command": "execute_script",
+            "comment": "リトライ回数増加",
+            "options": {
+              "script": "parseInt('${LOGIN_RETRY_COUNT}') + 1",
+              "variable": "LOGIN_RETRY_COUNT"
+            }
+          },
+          {
+            "id": 26,
+            "command": "end_try",
+            "comment": "ログイン試行終了",
+            "options": {}
+          },
+          {
+            "id": 27,
+            "command": "end_while",
+            "comment": "ログイン試行ループ終了",
+            "options": {}
+          },
+          {
+            "id": 28,
+            "command": "if",
+            "comment": "ログイン失敗判定",
+            "options": {
+              "condition": "${LOGIN_RETRY_COUNT} >= 3"
+            }
+          },
+          {
+            "id": 29,
+            "command": "send_mail",
+            "comment": "ログイン失敗通知",
+            "options": {
+              "to": "admin@company.com",
+              "subject": "【エラー】SUUMO自動取得：ログイン失敗",
+              "body": "SUUMOへのログインに3回失敗しました。ログイン情報を確認してください。"
+            }
+          },
+          {
+            "id": 30,
+            "command": "script_exit",
+            "comment": "ログイン失敗で処理終了",
+            "options": {
+              "status": 1,
+              "message": "SUUMOログインに失敗しました"
+            }
+          },
+          {
+            "id": 31,
+            "command": "end_if",
+            "comment": "ログイン失敗判定終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "反響データ取得処理",
+        "description": "反響データページへ移動し、新着データを検索・取得",
+        "steps": [
+          {
+            "id": 32,
+            "command": "comment",
+            "comment": "=== 反響データ取得処理開始 ===",
+            "options": {}
+          },
+          {
+            "id": 33,
+            "command": "click",
+            "comment": "反響管理メニューをクリック（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "a[href*='inquiry'], .menu-inquiry",
+              "selector_type": "css",
+              "click_type": "click",
+              "wait_timeout": 10
+            }
+          },
+          {
+            "id": 34,
+            "command": "wait_for_screen_calms",
+            "comment": "反響データページ読み込み待機",
+            "options": {}
+          },
+          {
+            "id": 35,
+            "command": "input_text",
+            "comment": "検索開始日入力（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "input[name='dateFrom']",
+              "selector_type": "css",
+              "text": "${SEARCH_DATE_FROM}",
+              "clear_first": true
+            }
+          },
+          {
+            "id": 36,
+            "command": "input_text",
+            "comment": "検索終了日入力（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "input[name='dateTo']",
+              "selector_type": "css",
+              "text": "${PROCESS_DATE}",
+              "clear_first": true
+            }
+          },
+          {
+            "id": 37,
+            "command": "click",
+            "comment": "検索実行（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": "button[type='submit'], .search-btn",
+              "selector_type": "css",
+              "click_type": "click",
+              "wait_timeout": 15
+            }
+          },
+          {
+            "id": 38,
+            "command": "wait_for_screen_calms",
+            "comment": "検索結果読み込み待機",
+            "options": {}
+          },
+          {
+            "id": 39,
+            "command": "execute_script",
+            "comment": "反響データを配列形式で取得（※実際のDOM構造に合わせて調整）",
+            "options": {
+              "script": "const rows = document.querySelectorAll('.inquiry-list tbody tr'); const data = []; rows.forEach(row => { const cols = row.querySelectorAll('td'); if(cols.length >= 5) { data.push({ date: cols[0].textContent.trim(), property: cols[1].textContent.trim(), customer: cols[2].textContent.trim(), contact: cols[3].textContent.trim(), status: cols[4].textContent.trim() }); } }); return JSON.stringify(data);",
+              "variable": "NEW_INQUIRY_DATA_JSON"
+            }
+          },
+          {
+            "id": 40,
+            "command": "execute_script",
+            "comment": "取得データ件数確認",
+            "options": {
+              "script": "const data = JSON.parse('${NEW_INQUIRY_DATA_JSON}' || '[]'); return data.length;",
+              "variable": "DATA_COUNT"
+            }
+          },
+          {
+            "id": 41,
+            "command": "if",
+            "comment": "新着データ存在確認",
+            "options": {
+              "condition": "${DATA_COUNT} > 0"
+            }
+          },
+          {
+            "id": 42,
+            "command": "comment",
+            "comment": "新着データが見つかりました: ${DATA_COUNT}件",
+            "options": {}
+          },
+          {
+            "id": 43,
+            "command": "else",
+            "comment": "新着データなしの場合",
+            "options": {}
+          },
+          {
+            "id": 44,
+            "command": "comment",
+            "comment": "新着データはありませんでした",
+            "options": {}
+          },
+          {
+            "id": 45,
+            "command": "close_tab",
+            "comment": "ブラウザを閉じる",
+            "options": {}
+          },
+          {
+            "id": 46,
+            "command": "script_exit",
+            "comment": "新着データなしで正常終了",
+            "options": {
+              "status": 0,
+              "message": "新着データはありませんでした"
+            }
+          },
+          {
+            "id": 47,
+            "command": "end_if",
+            "comment": "新着データ存在確認終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "Excelファイル更新処理",
+        "description": "取得したデータをExcelファイルに追記保存",
+        "steps": [
+          {
+            "id": 48,
+            "command": "comment",
+            "comment": "=== Excelファイル更新処理開始 ===",
+            "options": {}
+          },
+          {
+            "id": 49,
+            "command": "try",
+            "comment": "Excelファイル処理開始",
+            "options": {}
+          },
+          {
+            "id": 50,
+            "command": "execute_script",
+            "comment": "Excelファイルパス設定",
+            "options": {
+              "script": "'C:/RoboPat/反響データ.xlsx'",
+              "variable": "EXCEL_FILE_PATH"
+            }
+          },
+          {
+            "id": 51,
+            "command": "execute_script",
+            "comment": "Excel操作ライブラリ使用してファイル更新（※実際の実装は環境に依存）",
+            "options": {
+              "script": "const Excel = require('exceljs'); const workbook = new Excel.Workbook(); const filePath = '${EXCEL_FILE_PATH}'; const data = JSON.parse('${NEW_INQUIRY_DATA_JSON}'); let worksheet; try { await workbook.xlsx.readFile(filePath); worksheet = workbook.getWorksheet(1) || workbook.addWorksheet('反響データ'); } catch(e) { worksheet = workbook.addWorksheet('反響データ'); worksheet.addRow(['日付', '物件名', '顧客名', '連絡先', 'ステータス', '取得日時']); } data.forEach(row => { worksheet.addRow([row.date, row.property, row.customer, row.contact, row.status, new Date().toLocaleString('ja-JP')]); }); await workbook.xlsx.writeFile(filePath); return 'Excel更新完了';",
+              "variable": "EXCEL_RESULT"
+            }
+          },
+          {
+            "id": 52,
+            "command": "send_mail",
+            "comment": "処理完了通知",
+            "options": {
+              "to": "admin@company.com",
+              "subject": "【完了】SUUMO反響データ自動取得",
+              "body": "処理日: ${PROCESS_DATE}\n取得件数: ${DATA_COUNT}件\nファイル: ${EXCEL_FILE_PATH}\n\n処理が正常に完了しました。"
+            }
+          },
+          {
+            "id": 53,
+            "command": "catch",
+            "comment": "Excelファイル処理エラー",
+            "options": {}
+          },
+          {
+            "id": 54,
+            "command": "send_mail",
+            "comment": "Excelファイルエラー通知",
+            "options": {
+              "to": "admin@company.com",
+              "subject": "【エラー】SUUMO自動取得：Excelファイル処理失敗",
+              "body": "Excelファイル（${EXCEL_FILE_PATH}）への書き込み処理でエラーが発生しました。\nファイルの書き込み権限やパスを確認してください。"
+            }
+          },
+          {
+            "id": 55,
+            "command": "end_try",
+            "comment": "Excelファイル処理終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "終了処理",
+        "description": "ログアウト処理と後処理",
+        "steps": [
+          {
+            "id": 56,
+            "command": "comment",
+            "comment": "=== 終了処理開始 ===",
+            "options": {}
+          },
+          {
+            "id": 57,
+            "command": "try",
+            "comment": "ログアウト処理開始",
+            "options": {}
+          },
+          {
+            "id": 58,
+            "command": "click",
+            "comment": "ログアウトボタンクリック（※セレクタは実際の画面に合わせて調整）",
+            "options": {
+              "selector": ".logout-btn, a[href*='logout']",
+              "selector_type": "css",
+              "click_type": "click",
+              "wait_timeout": 5
+            }
+          },
+          {
+            "id": 59,
+            "command": "wait_for_screen_calms",
+            "comment": "ログアウト処理待機",
+            "options": {}
+          },
+          {
+            "id": 60,
+            "command": "catch",
+            "comment": "ログアウトエラー（無視）",
+            "options": {}
+          },
+          {
+            "id": 61,
+            "command": "end_try",
+            "comment": "ログアウト処理終了",
+            "options": {}
+          },
+          {
+            "id": 62,
+            "command": "close_tab",
+            "comment": "ブラウザを閉じる",
+            "options": {}
+          },
+          {
+            "id": 63,
+            "command": "comment",
+            "comment": "=== SUUMO反響データ自動取得処理完了 ===",
+            "options": {}
+          },
+          {
+            "id": 64,
+            "command": "script_exit",
+            "comment": "正常終了",
+            "options": {
+              "status": 0,
+              "message": "処理が正常に完了しました"
+            }
+          }
+        ]
+      }
+    ],
+    "variables": [
+      {
+        "name": "SUUMO_LOGIN_ID",
+        "type": "STRING",
+        "default": "",
+        "description": "SUUMOログインID（環境変数から取得）"
+      },
+      {
+        "name": "SUUMO_PASSWORD",
+        "type": "STRING",
+        "default": "",
+        "description": "SUUMOログインパスワード（環境変数から取得）"
+      },
+      {
+        "name": "PROCESS_DATE",
+        "type": "STRING",
+        "default": "",
+        "description": "処理実行日（YYYY-MM-DD形式）"
+      },
+      {
+        "name": "SEARCH_DATE_FROM",
+        "type": "STRING",
+        "default": "",
+        "description": "検索開始日（前日、YYYY-MM-DD形式）"
+      },
+      {
+        "name": "LOGIN_RETRY_COUNT",
+        "type": "STRING",
+        "default": "0",
+        "description": "ログイン試行回数"
+      },
+      {
+        "name": "LOGIN_STATUS",
+        "type": "STRING",
+        "default": "",
+        "description": "ログイン状態確認用テキスト"
+      },
+      {
+        "name": "NEW_INQUIRY_DATA_JSON",
+        "type": "STRING",
+        "default": "[]",
+        "description": "取得した新着反響データ（JSON文字列）"
+      },
+      {
+        "name": "DATA_COUNT",
+        "type": "STRING",
+        "default": "0",
+        "description": "取得データ件数"
+      },
+      {
+        "name": "EXCEL_FILE_PATH",
+        "type": "STRING",
+        "default": "C:/RoboPat/反響データ.xlsx",
+        "description": "出力先Excelファイルパス"
+      },
+      {
+        "name": "EXCEL_RESULT",
+        "type": "STRING",
+        "default": "",
+        "description": "Excel処理結果メッセージ"
+      }
+    ]
+  }
+}
