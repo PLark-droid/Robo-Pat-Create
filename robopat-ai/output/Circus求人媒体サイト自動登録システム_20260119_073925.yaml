@@ -1,0 +1,367 @@
+project:
+  name: Circus求人媒体サイト自動登録システム
+  description: circusという求人媒体サイトに アクセスして未登録の企業は企業マスタから登録。次に求人票を作成し公開します。Robo-patで入力の自動化をしたいです。デモサイトをベースに処理を組み立ててください。HTMLはデスクトップ上の下記、求人登録.html、circus_company_demo.html
+variables:
+- name: company_count
+  type: STRING
+  default: '10'
+- name: current_index
+  type: STRING
+  default: '1'
+- name: company_name
+  type: STRING
+  default: サンプル企業株式会社
+- name: postal_code
+  type: STRING
+  default: 100-0001
+- name: address
+  type: STRING
+  default: 東京都千代田区千代田1-1-1
+- name: phone_number
+  type: STRING
+  default: 03-1234-5678
+- name: contact_person
+  type: STRING
+  default: 山田太郎
+- name: email
+  type: STRING
+  default: contact@sample-company.com
+- name: industry
+  type: STRING
+  default: IT・通信
+- name: employee_count
+  type: STRING
+  default: '100'
+- name: job_title
+  type: STRING
+  default: システムエンジニア募集
+- name: employment_type
+  type: STRING
+  default: 正社員
+- name: salary
+  type: STRING
+  default: 月給25万円～40万円
+- name: work_location
+  type: STRING
+  default: 東京都内
+- name: work_hours
+  type: STRING
+  default: 9:00～18:00
+- name: job_description
+  type: STRING
+  default: システム開発・保守業務
+- name: qualifications
+  type: STRING
+  default: IT経験2年以上
+- name: benefits
+  type: STRING
+  default: 社会保険完備、交通費支給
+- name: posting_period
+  type: STRING
+  default: '30'
+- name: publish_result
+  type: STRING
+  default: ''
+- name: processed_count
+  type: STRING
+  default: '0'
+- name: notification_email
+  type: STRING
+  default: admin@company.com
+steps:
+- id: 1
+  command: comment
+  comment: === 初期設定・企業マスタ読み込み ===
+  options:
+    text: システム初期化と企業マスタファイルの読み込み処理
+- id: 2
+  command: comment
+  comment: === Circus求人媒体サイト自動登録システム開始 ===
+  options: {}
+- id: 3
+  command: open_chrome
+  comment: Chrome起動
+  options:
+    url: about:blank
+    profile: default
+    headless: 'false'
+- id: 4
+  command: comment
+  comment: 企業マスタファイル読み込み処理（実際の環境では別途Excel操作が必要）
+  options: {}
+- id: 5
+  command: comment
+  comment: === 企業登録状況確認・新規登録 ===
+  options:
+    text: Circus企業登録画面での企業登録処理
+- id: 6
+  command: open_chrome
+  comment: 企業登録デモ画面を開く
+  options:
+    url: file:///C:/Users/%USERNAME%/Desktop/circus_company_demo.html
+    profile: default
+    headless: 'false'
+- id: 7
+  command: wait_for_screen_calms
+  comment: 画面の読み込み完了を待機
+  options: {}
+- id: 8
+  command: loop
+  comment: 企業マスタの件数分ループ処理開始
+  options:
+    count: ${company_count}
+    variable: current_index
+- id: 9
+  command: try
+  comment: 企業登録処理開始（エラーハンドリング）
+  options: {}
+- id: 10
+  command: input_text
+  comment: 企業名を入力
+  options:
+    selector: '#company_name'
+    selector_type: css
+    text: ${company_name}
+    clear_first: 'true'
+- id: 11
+  command: input_text
+  comment: 郵便番号を入力
+  options:
+    selector: '#postal_code'
+    selector_type: css
+    text: ${postal_code}
+    clear_first: 'true'
+- id: 12
+  command: input_text
+  comment: 住所を入力
+  options:
+    selector: '#address'
+    selector_type: css
+    text: ${address}
+    clear_first: 'true'
+- id: 13
+  command: input_text
+  comment: 電話番号を入力
+  options:
+    selector: '#phone'
+    selector_type: css
+    text: ${phone_number}
+    clear_first: 'true'
+- id: 14
+  command: input_text
+  comment: 担当者名を入力
+  options:
+    selector: '#contact_person'
+    selector_type: css
+    text: ${contact_person}
+    clear_first: 'true'
+- id: 15
+  command: input_text
+  comment: メールアドレスを入力
+  options:
+    selector: '#email'
+    selector_type: css
+    text: ${email}
+    clear_first: 'true'
+- id: 16
+  command: select
+  comment: 業種を選択
+  options:
+    selector: '#industry'
+    value: ${industry}
+    by: value
+- id: 17
+  command: input_text
+  comment: 従業員数を入力
+  options:
+    selector: '#employee_count'
+    selector_type: css
+    text: ${employee_count}
+    clear_first: 'true'
+- id: 18
+  command: click
+  comment: 企業登録ボタンをクリック
+  options:
+    selector: '#register_company'
+    selector_type: css
+    click_type: left
+    wait_timeout: '3000'
+- id: 19
+  command: wait_for_screen_calms
+  comment: 登録処理完了待機
+  options: {}
+- id: 20
+  command: catch
+  comment: エラー処理開始
+  options: {}
+- id: 21
+  command: comment
+  comment: 企業登録エラー発生 - 次の企業へスキップ
+  options: {}
+- id: 22
+  command: end_try
+  comment: エラーハンドリング終了
+  options: {}
+- id: 23
+  command: comment
+  comment: === 求人票作成・公開 ===
+  options:
+    text: 求人票作成画面での求人情報入力・公開処理
+- id: 24
+  command: open_chrome
+  comment: 求人登録画面を開く
+  options:
+    url: file:///C:/Users/%USERNAME%/Desktop/求人登録.html
+    profile: default
+    headless: 'false'
+- id: 25
+  command: wait_for_screen_calms
+  comment: 求人登録画面の読み込み完了を待機
+  options: {}
+- id: 26
+  command: input_text
+  comment: 求人タイトルを入力
+  options:
+    selector: '#job_title'
+    selector_type: css
+    text: ${job_title}
+    clear_first: 'true'
+- id: 27
+  command: select
+  comment: 雇用形態を選択
+  options:
+    selector: '#employment_type'
+    value: ${employment_type}
+    by: value
+- id: 28
+  command: input_text
+  comment: 給与情報を入力
+  options:
+    selector: '#salary'
+    selector_type: css
+    text: ${salary}
+    clear_first: 'true'
+- id: 29
+  command: input_text
+  comment: 勤務地を入力
+  options:
+    selector: '#work_location'
+    selector_type: css
+    text: ${work_location}
+    clear_first: 'true'
+- id: 30
+  command: input_text
+  comment: 勤務時間を入力
+  options:
+    selector: '#work_hours'
+    selector_type: css
+    text: ${work_hours}
+    clear_first: 'true'
+- id: 31
+  command: input_text
+  comment: 仕事内容を入力
+  options:
+    selector: '#job_description'
+    selector_type: css
+    text: ${job_description}
+    clear_first: 'true'
+- id: 32
+  command: input_text
+  comment: 応募資格を入力
+  options:
+    selector: '#qualifications'
+    selector_type: css
+    text: ${qualifications}
+    clear_first: 'true'
+- id: 33
+  command: input_text
+  comment: 福利厚生を入力
+  options:
+    selector: '#benefits'
+    selector_type: css
+    text: ${benefits}
+    clear_first: 'true'
+- id: 34
+  command: select
+  comment: 掲載期間を選択
+  options:
+    selector: '#posting_period'
+    value: ${posting_period}
+    by: value
+- id: 35
+  command: click
+  comment: プレビューボタンをクリック
+  options:
+    selector: '#preview_button'
+    selector_type: css
+    click_type: left
+    wait_timeout: '3000'
+- id: 36
+  command: wait_for_screen_calms
+  comment: プレビュー画面表示待機
+  options: {}
+- id: 37
+  command: click
+  comment: 公開ボタンをクリック
+  options:
+    selector: '#publish_button'
+    selector_type: css
+    click_type: left
+    wait_timeout: '5000'
+- id: 38
+  command: wait_for_screen_calms
+  comment: 公開処理完了待機
+  options: {}
+- id: 39
+  command: get_text
+  comment: 公開結果メッセージを取得
+  options:
+    selector: '#result_message'
+    variable: publish_result
+- id: 40
+  command: if
+  comment: 公開成功判定
+  options:
+    condition: ${publish_result} contains '公開しました'
+- id: 41
+  command: comment
+  comment: 求人公開成功 - ログ記録
+  options: {}
+- id: 42
+  command: else
+  comment: 公開失敗の場合
+  options: {}
+- id: 43
+  command: comment
+  comment: 求人公開失敗 - エラーログ記録
+  options: {}
+- id: 44
+  command: end_if
+  comment: 公開結果判定終了
+  options: {}
+- id: 45
+  command: comment
+  comment: === 処理完了・クリーンアップ ===
+  options:
+    text: 全処理完了後のクリーンアップと結果通知
+- id: 46
+  command: comment
+  comment: 次の企業へ移行（ループ継続）
+  options: {}
+- id: 47
+  command: comment
+  comment: 全企業の処理完了チェック
+  options: {}
+- id: 48
+  command: send_mail
+  comment: 処理完了通知メール送信
+  options:
+    to: ${notification_email}
+    subject: Circus求人自動登録処理完了通知
+    body: '企業登録および求人公開処理が完了しました。処理件数: ${processed_count}'
+- id: 49
+  command: script_exit
+  comment: スクリプト正常終了
+  options:
+    status: success
+    message: Circus求人自動登録処理が正常に完了しました

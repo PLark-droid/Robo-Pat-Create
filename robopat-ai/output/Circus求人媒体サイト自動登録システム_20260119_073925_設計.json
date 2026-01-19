@@ -1,0 +1,663 @@
+{
+  "requirement": "circusという求人媒体サイトに アクセスして未登録の企業は企業マスタから登録。次に求人票を作成し公開します。Robo-patで入力の自動化をしたいです。デモサイトをベースに処理を組み立ててください。HTMLはデスクトップ上の下記、求人登録.html、circus_company_demo.html",
+  "basic_design": {
+    "project_name": "Circus求人媒体サイト自動登録システム",
+    "overview": "企業マスタから未登録企業を自動登録し、求人票を作成・公開する自動化システム",
+    "target_systems": [
+      {
+        "name": "求人登録画面",
+        "type": "Web",
+        "url_or_path": "file:///デスクトップ/求人登録.html"
+      },
+      {
+        "name": "Circus企業登録デモ画面",
+        "type": "Web",
+        "url_or_path": "file:///デスクトップ/circus_company_demo.html"
+      },
+      {
+        "name": "企業マスタファイル",
+        "type": "Excel",
+        "url_or_path": "デスクトップ上のExcelファイル"
+      }
+    ],
+    "process_flow": [
+      {
+        "step": 1,
+        "name": "企業マスタ読み込み",
+        "description": "Excelファイルから企業情報を取得",
+        "input": "企業マスタExcelファイル",
+        "output": "企業情報リスト"
+      },
+      {
+        "step": 2,
+        "name": "企業登録状況確認",
+        "description": "各企業のCircus登録状況をチェック",
+        "input": "企業情報",
+        "output": "未登録企業リスト"
+      },
+      {
+        "step": 3,
+        "name": "企業新規登録",
+        "description": "未登録企業をCircusに登録",
+        "input": "未登録企業情報",
+        "output": "企業登録完了通知"
+      },
+      {
+        "step": 4,
+        "name": "求人票作成",
+        "description": "登録済み企業の求人票を作成",
+        "input": "企業情報、求人情報",
+        "output": "求人票データ"
+      },
+      {
+        "step": 5,
+        "name": "求人票公開",
+        "description": "作成した求人票をサイトに公開",
+        "input": "求人票データ",
+        "output": "公開完了通知"
+      }
+    ],
+    "variables": [
+      {
+        "name": "company_master_path",
+        "description": "企業マスタファイルのパス",
+        "type": "FILE",
+        "source": "ユーザー入力"
+      },
+      {
+        "name": "company_list",
+        "description": "企業情報リスト",
+        "type": "LIST",
+        "source": "Excelファイル"
+      },
+      {
+        "name": "unregistered_companies",
+        "description": "未登録企業リスト",
+        "type": "LIST",
+        "source": "処理結果"
+      },
+      {
+        "name": "job_template",
+        "description": "求人票テンプレート情報",
+        "type": "STRING",
+        "source": "設定ファイル"
+      },
+      {
+        "name": "processing_status",
+        "description": "処理状況フラグ",
+        "type": "STRING",
+        "source": "処理結果"
+      }
+    ],
+    "preconditions": [
+      "企業マスタExcelファイルがデスクトップに配置されている",
+      "HTMLファイル（求人登録.html、circus_company_demo.html）がデスクトップに存在する",
+      "ブラウザが正常に動作する環境である",
+      "企業マスタに必要な項目（企業名、住所、電話番号等）が含まれている",
+      "インターネット接続が安定している"
+    ],
+    "error_handling": {
+      "strategy": "リトライ（3回まで）、エラー時は次の企業へスキップ",
+      "notification": "ログファイル出力、エラー発生時はメール通知"
+    },
+    "estimated_commands": 45
+  },
+  "detailed_design": {
+    "project_name": "Circus求人媒体サイト自動登録システム",
+    "tabs": [
+      {
+        "name": "初期設定・企業マスタ読み込み",
+        "description": "システム初期化と企業マスタファイルの読み込み処理",
+        "steps": [
+          {
+            "id": 1,
+            "command": "comment",
+            "comment": "=== Circus求人媒体サイト自動登録システム開始 ===",
+            "options": {}
+          },
+          {
+            "id": 2,
+            "command": "open_chrome",
+            "comment": "Chrome起動",
+            "options": {
+              "url": "about:blank",
+              "profile": "default",
+              "headless": "false"
+            }
+          },
+          {
+            "id": 3,
+            "command": "comment",
+            "comment": "企業マスタファイル読み込み処理（実際の環境では別途Excel操作が必要）",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "企業登録状況確認・新規登録",
+        "description": "Circus企業登録画面での企業登録処理",
+        "steps": [
+          {
+            "id": 4,
+            "command": "open_chrome",
+            "comment": "企業登録デモ画面を開く",
+            "options": {
+              "url": "file:///C:/Users/%USERNAME%/Desktop/circus_company_demo.html",
+              "profile": "default",
+              "headless": "false"
+            }
+          },
+          {
+            "id": 5,
+            "command": "wait_for_screen_calms",
+            "comment": "画面の読み込み完了を待機",
+            "options": {}
+          },
+          {
+            "id": 6,
+            "command": "loop",
+            "comment": "企業マスタの件数分ループ処理開始",
+            "options": {
+              "count": "${company_count}",
+              "variable": "current_index"
+            }
+          },
+          {
+            "id": 7,
+            "command": "try",
+            "comment": "企業登録処理開始（エラーハンドリング）",
+            "options": {}
+          },
+          {
+            "id": 8,
+            "command": "input_text",
+            "comment": "企業名を入力",
+            "options": {
+              "selector": "#company_name",
+              "selector_type": "css",
+              "text": "${company_name}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 9,
+            "command": "input_text",
+            "comment": "郵便番号を入力",
+            "options": {
+              "selector": "#postal_code",
+              "selector_type": "css",
+              "text": "${postal_code}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 10,
+            "command": "input_text",
+            "comment": "住所を入力",
+            "options": {
+              "selector": "#address",
+              "selector_type": "css",
+              "text": "${address}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 11,
+            "command": "input_text",
+            "comment": "電話番号を入力",
+            "options": {
+              "selector": "#phone",
+              "selector_type": "css",
+              "text": "${phone_number}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 12,
+            "command": "input_text",
+            "comment": "担当者名を入力",
+            "options": {
+              "selector": "#contact_person",
+              "selector_type": "css",
+              "text": "${contact_person}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 13,
+            "command": "input_text",
+            "comment": "メールアドレスを入力",
+            "options": {
+              "selector": "#email",
+              "selector_type": "css",
+              "text": "${email}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 14,
+            "command": "select",
+            "comment": "業種を選択",
+            "options": {
+              "selector": "#industry",
+              "value": "${industry}",
+              "by": "value"
+            }
+          },
+          {
+            "id": 15,
+            "command": "input_text",
+            "comment": "従業員数を入力",
+            "options": {
+              "selector": "#employee_count",
+              "selector_type": "css",
+              "text": "${employee_count}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 16,
+            "command": "click",
+            "comment": "企業登録ボタンをクリック",
+            "options": {
+              "selector": "#register_company",
+              "selector_type": "css",
+              "click_type": "left",
+              "wait_timeout": "3000"
+            }
+          },
+          {
+            "id": 17,
+            "command": "wait_for_screen_calms",
+            "comment": "登録処理完了待機",
+            "options": {}
+          },
+          {
+            "id": 18,
+            "command": "catch",
+            "comment": "エラー処理開始",
+            "options": {}
+          },
+          {
+            "id": 19,
+            "command": "comment",
+            "comment": "企業登録エラー発生 - 次の企業へスキップ",
+            "options": {}
+          },
+          {
+            "id": 20,
+            "command": "end_try",
+            "comment": "エラーハンドリング終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "求人票作成・公開",
+        "description": "求人票作成画面での求人情報入力・公開処理",
+        "steps": [
+          {
+            "id": 21,
+            "command": "open_chrome",
+            "comment": "求人登録画面を開く",
+            "options": {
+              "url": "file:///C:/Users/%USERNAME%/Desktop/求人登録.html",
+              "profile": "default",
+              "headless": "false"
+            }
+          },
+          {
+            "id": 22,
+            "command": "wait_for_screen_calms",
+            "comment": "求人登録画面の読み込み完了を待機",
+            "options": {}
+          },
+          {
+            "id": 23,
+            "command": "input_text",
+            "comment": "求人タイトルを入力",
+            "options": {
+              "selector": "#job_title",
+              "selector_type": "css",
+              "text": "${job_title}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 24,
+            "command": "select",
+            "comment": "雇用形態を選択",
+            "options": {
+              "selector": "#employment_type",
+              "value": "${employment_type}",
+              "by": "value"
+            }
+          },
+          {
+            "id": 25,
+            "command": "input_text",
+            "comment": "給与情報を入力",
+            "options": {
+              "selector": "#salary",
+              "selector_type": "css",
+              "text": "${salary}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 26,
+            "command": "input_text",
+            "comment": "勤務地を入力",
+            "options": {
+              "selector": "#work_location",
+              "selector_type": "css",
+              "text": "${work_location}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 27,
+            "command": "input_text",
+            "comment": "勤務時間を入力",
+            "options": {
+              "selector": "#work_hours",
+              "selector_type": "css",
+              "text": "${work_hours}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 28,
+            "command": "input_text",
+            "comment": "仕事内容を入力",
+            "options": {
+              "selector": "#job_description",
+              "selector_type": "css",
+              "text": "${job_description}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 29,
+            "command": "input_text",
+            "comment": "応募資格を入力",
+            "options": {
+              "selector": "#qualifications",
+              "selector_type": "css",
+              "text": "${qualifications}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 30,
+            "command": "input_text",
+            "comment": "福利厚生を入力",
+            "options": {
+              "selector": "#benefits",
+              "selector_type": "css",
+              "text": "${benefits}",
+              "clear_first": "true"
+            }
+          },
+          {
+            "id": 31,
+            "command": "select",
+            "comment": "掲載期間を選択",
+            "options": {
+              "selector": "#posting_period",
+              "value": "${posting_period}",
+              "by": "value"
+            }
+          },
+          {
+            "id": 32,
+            "command": "click",
+            "comment": "プレビューボタンをクリック",
+            "options": {
+              "selector": "#preview_button",
+              "selector_type": "css",
+              "click_type": "left",
+              "wait_timeout": "3000"
+            }
+          },
+          {
+            "id": 33,
+            "command": "wait_for_screen_calms",
+            "comment": "プレビュー画面表示待機",
+            "options": {}
+          },
+          {
+            "id": 34,
+            "command": "click",
+            "comment": "公開ボタンをクリック",
+            "options": {
+              "selector": "#publish_button",
+              "selector_type": "css",
+              "click_type": "left",
+              "wait_timeout": "5000"
+            }
+          },
+          {
+            "id": 35,
+            "command": "wait_for_screen_calms",
+            "comment": "公開処理完了待機",
+            "options": {}
+          },
+          {
+            "id": 36,
+            "command": "get_text",
+            "comment": "公開結果メッセージを取得",
+            "options": {
+              "selector": "#result_message",
+              "variable": "publish_result"
+            }
+          },
+          {
+            "id": 37,
+            "command": "if",
+            "comment": "公開成功判定",
+            "options": {
+              "condition": "${publish_result} contains '公開しました'"
+            }
+          },
+          {
+            "id": 38,
+            "command": "comment",
+            "comment": "求人公開成功 - ログ記録",
+            "options": {}
+          },
+          {
+            "id": 39,
+            "command": "else",
+            "comment": "公開失敗の場合",
+            "options": {}
+          },
+          {
+            "id": 40,
+            "command": "comment",
+            "comment": "求人公開失敗 - エラーログ記録",
+            "options": {}
+          },
+          {
+            "id": 41,
+            "command": "end_if",
+            "comment": "公開結果判定終了",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "name": "処理完了・クリーンアップ",
+        "description": "全処理完了後のクリーンアップと結果通知",
+        "steps": [
+          {
+            "id": 42,
+            "command": "comment",
+            "comment": "次の企業へ移行（ループ継続）",
+            "options": {}
+          },
+          {
+            "id": 43,
+            "command": "comment",
+            "comment": "全企業の処理完了チェック",
+            "options": {}
+          },
+          {
+            "id": 44,
+            "command": "send_mail",
+            "comment": "処理完了通知メール送信",
+            "options": {
+              "to": "${notification_email}",
+              "subject": "Circus求人自動登録処理完了通知",
+              "body": "企業登録および求人公開処理が完了しました。処理件数: ${processed_count}"
+            }
+          },
+          {
+            "id": 45,
+            "command": "script_exit",
+            "comment": "スクリプト正常終了",
+            "options": {
+              "status": "success",
+              "message": "Circus求人自動登録処理が正常に完了しました"
+            }
+          }
+        ]
+      }
+    ],
+    "variables": [
+      {
+        "name": "company_count",
+        "type": "STRING",
+        "default": "10",
+        "description": "処理対象企業数"
+      },
+      {
+        "name": "current_index",
+        "type": "STRING",
+        "default": "1",
+        "description": "現在処理中の企業インデックス"
+      },
+      {
+        "name": "company_name",
+        "type": "STRING",
+        "default": "サンプル企業株式会社",
+        "description": "企業名"
+      },
+      {
+        "name": "postal_code",
+        "type": "STRING",
+        "default": "100-0001",
+        "description": "郵便番号"
+      },
+      {
+        "name": "address",
+        "type": "STRING",
+        "default": "東京都千代田区千代田1-1-1",
+        "description": "住所"
+      },
+      {
+        "name": "phone_number",
+        "type": "STRING",
+        "default": "03-1234-5678",
+        "description": "電話番号"
+      },
+      {
+        "name": "contact_person",
+        "type": "STRING",
+        "default": "山田太郎",
+        "description": "担当者名"
+      },
+      {
+        "name": "email",
+        "type": "STRING",
+        "default": "contact@sample-company.com",
+        "description": "メールアドレス"
+      },
+      {
+        "name": "industry",
+        "type": "STRING",
+        "default": "IT・通信",
+        "description": "業種"
+      },
+      {
+        "name": "employee_count",
+        "type": "STRING",
+        "default": "100",
+        "description": "従業員数"
+      },
+      {
+        "name": "job_title",
+        "type": "STRING",
+        "default": "システムエンジニア募集",
+        "description": "求人タイトル"
+      },
+      {
+        "name": "employment_type",
+        "type": "STRING",
+        "default": "正社員",
+        "description": "雇用形態"
+      },
+      {
+        "name": "salary",
+        "type": "STRING",
+        "default": "月給25万円～40万円",
+        "description": "給与"
+      },
+      {
+        "name": "work_location",
+        "type": "STRING",
+        "default": "東京都内",
+        "description": "勤務地"
+      },
+      {
+        "name": "work_hours",
+        "type": "STRING",
+        "default": "9:00～18:00",
+        "description": "勤務時間"
+      },
+      {
+        "name": "job_description",
+        "type": "STRING",
+        "default": "システム開発・保守業務",
+        "description": "仕事内容"
+      },
+      {
+        "name": "qualifications",
+        "type": "STRING",
+        "default": "IT経験2年以上",
+        "description": "応募資格"
+      },
+      {
+        "name": "benefits",
+        "type": "STRING",
+        "default": "社会保険完備、交通費支給",
+        "description": "福利厚生"
+      },
+      {
+        "name": "posting_period",
+        "type": "STRING",
+        "default": "30",
+        "description": "掲載期間（日数）"
+      },
+      {
+        "name": "publish_result",
+        "type": "STRING",
+        "default": "",
+        "description": "公開結果メッセージ"
+      },
+      {
+        "name": "processed_count",
+        "type": "STRING",
+        "default": "0",
+        "description": "処理完了件数"
+      },
+      {
+        "name": "notification_email",
+        "type": "STRING",
+        "default": "admin@company.com",
+        "description": "通知先メールアドレス"
+      }
+    ]
+  },
+  "generated_at": "20260119_073925"
+}
